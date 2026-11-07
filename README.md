@@ -36,7 +36,7 @@ that decided it.
 ## Why the call does not fall apart
 
 `core.js` is the rulebook, and it is the part worth reading. It is plain
-functions with no DOM and no network, and `node --test core.test.js` runs 35
+functions with no DOM and no network, and `node --test core.test.js` runs 38
 checks against it.
 
 - A reply is cleaned before it is spoken: name labels, wrapping quotes, markdown
@@ -64,7 +64,7 @@ the rules, `app.js` the drawing, the OAuth flow and the call loop, `index.html`
 the page.
 
 ```bash
-node --test core.test.js     # 35 tests, no dependencies, Node 18+
+node --test core.test.js     # 38 tests, no dependencies, Node 18+
 ```
 
 `harness.js` runs a real call against the live API with the same rules the page
