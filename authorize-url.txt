@@ -1,1 +1,0 @@
-https://enter.pollinations.ai/authorize?response_type=code&client_id=pk_OTwzp12Hs8UrpqKm&redirect_uri=https%3A%2F%2Fsugamdeol.github.io%2Fcallwait%2F&scope=profile%20usage&budget=6&models=text&expiry=7&state=teststate&code_challenge=uwVMWLAP7UMJt47S9oh7mP1nVnmqZw-E7uOw7MJdKug&code_challenge_method=S256
