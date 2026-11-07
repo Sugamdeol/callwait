@@ -185,7 +185,8 @@
     el.className = "status" + (kind ? " " + kind : "");
   }
 
-  function chat(system, user, maxTokens, jsonMode) {
+  function chat(system, user, maxTokens, jsonMode, attempt) {
+    attempt = attempt || 0;
     var body = {
       model: SPEAKER_MODEL,
       messages: [
@@ -209,6 +210,12 @@
         var data = null;
         try { data = JSON.parse(text); } catch (e) { data = null; }
         if (!r.ok) {
+          /* A 5xx is the service wobbling, not a bad request. One retry after
+             a short pause saves a whole call from dying on a blip. */
+          if (r.status >= 500 && attempt < 1) {
+            return new Promise(function (res) { setTimeout(res, 2500); })
+              .then(function () { return chat(system, user, maxTokens, jsonMode, attempt + 1); });
+          }
           var m = (data && data.error && (data.error.message || data.error)) || text || ("HTTP " + r.status);
           var e2 = new Error(String(typeof m === "string" ? m : JSON.stringify(m)).slice(0, 200));
           e2.status = r.status;
@@ -420,21 +427,25 @@
   }
 
   function judge() {
+    var by = C.hangerUpper(S.turns);
     setStatus("A third model is reading the call...", "");
-    return chat(C.JUDGE_SYSTEM, C.judgePrompt(S.turns), 200, true).then(function (raw) {
+    return chat(C.JUDGE_SYSTEM, C.judgePrompt(S.turns, by), 700, true).then(function (raw) {
       var v = C.readVerdict(raw);
       var box = $("#verdict");
       box.hidden = false;
-      if (v.who) {
-        $("#verdictTitle").textContent = C.CAST[v.who].name + " ended the call.";
+      if (by) {
+        $("#verdictTitle").textContent = C.CAST[by].name + " hung up.";
       } else {
-        $("#verdictTitle").textContent = "The judge could not name a winner.";
+        $("#verdictTitle").textContent = "Nobody hung up inside the turn limit.";
       }
-      $("#verdictWhy").textContent = v.why || "";
+      var line = v.who
+        ? C.CAST[v.who].name + " gave up the most ground."
+        : "The judge could not name who conceded.";
+      $("#verdictWhy").textContent = v.why ? line + " " + v.why : line;
       var conf = v.confidence == null ? 0 : v.confidence;
       var sat = v.satisfied == null ? 0 : v.satisfied;
       $("#confFill").style.width = Math.round(conf * 100) + "%";
-      $("#confVal").textContent = v.confidence == null ? "not given" : Math.round(conf * 100) + "% sure";
+      $("#confVal").textContent = v.confidence == null ? "not given" : "conceded: " + Math.round(conf * 100) + "% sure";
       $("#satFill").style.width = Math.round(sat * 100) + "%";
       $("#satVal").textContent = v.satisfied == null ? "not given" : Math.round(sat * 100) + "%";
       setStatus("", "");

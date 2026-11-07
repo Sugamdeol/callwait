@@ -11,7 +11,7 @@ const STOP_AFTER = Number(process.argv[3] || 6);
 
 let calls = 0;
 
-async function chat(system, user, maxTokens, jsonMode) {
+async function chat(system, user, maxTokens, jsonMode, attempts = 0) {
   const body = {
     model: MODEL,
     messages: [{ role: "system", content: system }, { role: "user", content: user }],
@@ -24,7 +24,11 @@ async function chat(system, user, maxTokens, jsonMode) {
     headers: { "Content-Type": "application/json", Authorization: "Bearer " + KEY },
     body: JSON.stringify(body)
   });
-  const text = await r.text();
+  let text = await r.text();
+  if (!r.ok && r.status >= 500 && attempts < 1) {
+    await new Promise((z) => setTimeout(z, 2500));
+    return chat(system, user, maxTokens, jsonMode, attempts + 1);
+  }
   if (!r.ok) throw new Error("HTTP " + r.status + " " + text.slice(0, 200));
   calls += 1;
   return JSON.parse(text).choices[0].message.content || "";
@@ -58,7 +62,7 @@ async function speakOnce(turns, speaker, attempt) {
   }
   console.log("\n--- reason:", reason, "| turns:", turns.length, "| calls:", calls);
   console.log("stats:", JSON.stringify(C.stats(turns)));
-  const raw = await chat(C.JUDGE_SYSTEM, C.judgePrompt(turns), 200, true);
+  const raw = await chat(C.JUDGE_SYSTEM, C.judgePrompt(turns, C.hangerUpper(turns)), 700, true);
   console.log("\nJUDGE RAW:", raw);
   verdict = C.readVerdict(raw);
   console.log("VERDICT:", JSON.stringify(verdict));

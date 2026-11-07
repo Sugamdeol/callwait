@@ -125,8 +125,24 @@ test("judge prompt carries the transcript", () => {
 });
 
 test("judge system prompt asks for the three fields", () => {
-  assert.match(C.JUDGE_SYSTEM, /"who"/);
+  assert.match(C.JUDGE_SYSTEM, /"conceded"/);
   assert.match(C.JUDGE_SYSTEM, /"satisfied"/);
+});
+
+test("judge prompt names who hung up", () => {
+  const j = C.judgePrompt([{ speaker: "dale", text: "bye", hangup: true }], "dale");
+  assert.match(j, /Dale hung up/);
+});
+
+test("hangerUpper finds the last speaker who hung up", () => {
+  assert.equal(C.hangerUpper([
+    { speaker: "mira", text: "a" },
+    { speaker: "dale", text: "b", hangup: true }
+  ]), "dale");
+});
+
+test("hangerUpper is null when nobody hung up", () => {
+  assert.equal(C.hangerUpper([{ speaker: "mira", text: "a" }]), null);
 });
 
 test("readVerdict reads clean JSON", () => {

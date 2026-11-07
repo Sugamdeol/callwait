@@ -166,21 +166,34 @@
     return Boolean(hangupSeen) && turnCount >= MIN_TURNS;
   }
 
-  /* The judge: a third model reads the finished call and says who gave up
-     first and whether Dale got what he called for. It is asked for JSON so
-     the answer can be drawn, and it is told to judge the transcript only. */
+  /* The judge: a third model reads the finished call and says who gave up the
+     most ground and whether Dale got what he called for. It is told who hung
+     up rather than being asked to guess, because the transcript already
+     records that. */
   var JUDGE_SYSTEM = [
     "You read a finished phone call between two agents and judge it.",
     "Answer only from what is in the transcript. Do not invent facts.",
+    "You are told which of them hung up. Do not guess that; judge the argument.",
     "Reply with one JSON object and nothing else:",
-    '{"who":"mira"|"dale","confidence":0.0-1.0,"satisfied":0.0-1.0,"why":"one sentence"}',
-    "who is the person who ended the call, or would have ended it next.",
+    '{"conceded":"mira"|"dale","confidence":0.0-1.0,"satisfied":0.0-1.0,"why":"one sentence"}',
+    "conceded is the agent who gave up the most ground during the call: the one whose position moved furthest from the goal it started with. A hangup is not automatically a concession.",
     "confidence is how sure you are of that. satisfied is the chance Dale hung up having got what he called for.",
     "why names the moment in the call that decided it, in at most 25 words."
   ].join("\n");
 
-  function judgePrompt(turns) {
-    return "The call:\n\n" + transcriptText(turns) + "\n\nJudge it.";
+  function judgePrompt(turns, hangupBy) {
+    var who = hangupBy && CAST[hangupBy] ? CAST[hangupBy].name : null;
+    return "The call:\n\n" + transcriptText(turns) +
+      (who ? "\n\n" + who + " hung up." : "") +
+      "\n\nJudge it.";
+  }
+
+  /* Who actually ended the call, read from the transcript. */
+  function hangerUpper(turns) {
+    for (var i = turns.length - 1; i >= 0; i -= 1) {
+      if (turns[i].hangup) return turns[i].speaker;
+    }
+    return null;
   }
 
   /* Read the judge's reply defensively: models wrap JSON in fences, add a
@@ -195,7 +208,7 @@
       try { obj = JSON.parse(s.slice(start, end + 1)); } catch (e) { obj = null; }
     }
     if (obj && typeof obj === "object") {
-      var who = String(obj.who || obj.speaker || "").toLowerCase();
+      var who = String(obj.conceded || obj.who || obj.speaker || "").toLowerCase();
       if (who.indexOf("dale") === 0) out.who = "dale";
       else if (who.indexOf("mira") === 0) out.who = "mira";
       out.confidence = num(obj.confidence);
@@ -234,7 +247,7 @@
     sceneList: sceneList, other: other, systemPrompt: systemPrompt,
     transcriptText: transcriptText, userPrompt: userPrompt, cleanReply: cleanReply,
     isStale: isStale, nextSpeaker: nextSpeaker, callOver: callOver, honourHangup: honourHangup,
-    JUDGE_SYSTEM: JUDGE_SYSTEM, judgePrompt: judgePrompt,
+    JUDGE_SYSTEM: JUDGE_SYSTEM, judgePrompt: judgePrompt, hangerUpper: hangerUpper,
     readVerdict: readVerdict, stats: stats
   };
 });
