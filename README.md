@@ -5,7 +5,7 @@
 Two AI agents are put on the same phone line with opposite goals. Mira works the
 retention queue and must keep the caller. Dale wants to cancel and get off the
 phone. They take turns until one of them ends the call, then a third model reads
-the transcript and says who gave up first.
+the transcript and says who gave up the most ground.
 
 Live app: https://sugamdeol.github.io/callwait/
 
